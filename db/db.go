@@ -18,7 +18,7 @@ type Connection struct {
 
 type Settings struct {
 	id             string
-	ListOfServices string
+	ListOfServices []string
 	NumOfSecCheck  string
 	NumOfSecWait   string
 	NumOfAttempts  string
@@ -47,8 +47,8 @@ func (conn *Connection) PutItem() {
 				S: aws.String("1"),
 			},
 			"ListOfServices": {
-				// SS: aws.StringSlice([]string{"bluetooth", "lvm2"}),
-				S: aws.String("bluetooth"),
+				SS: aws.StringSlice([]string{"bluetooth", "lvm2"}),
+				// SS: aws.String("bluetooth"),
 			},
 			"NumOfSecCheck": {
 				S: aws.String("60s"),

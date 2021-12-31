@@ -11,6 +11,7 @@ import (
 
 	"github.com/fpiwowarczyk/watchdogGO/db"
 	"github.com/fpiwowarczyk/watchdogGO/notifier"
+	"github.com/fpiwowarczyk/watchdogGO/utils"
 )
 
 const (
@@ -21,13 +22,13 @@ const (
 )
 
 type Watchdog struct {
-	name          string
+	names         []string
 	numOfSecCheck time.Duration
 	numOfSecWait  time.Duration
 	numOfAttempts int
 }
 
-func NewWatchdog(name, numOfSecCheck, numOfSecWait string, attempts int) (*Watchdog, error) {
+func NewWatchdog(names []string, numOfSecCheck, numOfSecWait string, attempts int) (*Watchdog, error) {
 	checkInterval, err := time.ParseDuration(numOfSecCheck)
 	if err != nil {
 		return nil, err
@@ -42,15 +43,23 @@ func NewWatchdog(name, numOfSecCheck, numOfSecWait string, attempts int) (*Watch
 		return nil, errors.New("Incorrect number of tries to run service")
 	}
 
-	if len(name) < 1 {
-		return nil, errors.New("Service name cannot be empty")
+	if len(names) < 1 {
+		return nil, errors.New("List of services cannot be empty")
 	}
 
-	if _, err := os.Stat("/etc/init.d/" + name); err != nil {
-		return nil, errors.New(fmt.Sprintf("Service %s doesn't exist\n", name))
+	for _, name := range names {
+		if _, err := os.Stat("/etc/init.d/" + name); err != nil {
+			log.Fatalln("Service %s doesn't exists, will proceed without missing service", name)
+			names = utils.RemoveIndex(names, utils.IndexOf(names, name))
+		}
 	}
+
+	if len(names) < 1 {
+		return nil, errors.New("None of services exists")
+	}
+
 	watchdog := new(Watchdog)
-	watchdog.name = name
+	watchdog.names = names
 	watchdog.numOfSecCheck = checkInterval
 	watchdog.numOfSecWait = retryInterval
 	watchdog.numOfAttempts = attempts
@@ -82,7 +91,7 @@ func notify(notifier *notifier.Notifier, service string, attempts, status int) {
 	case serviceDown:
 		logMsg = fmt.Sprintf("%s Service %s is down", time.Now().String(), service)
 	case serviceStart:
-		logMsg = fmt.Sprintf("%s Service %s has been sterted after %d attempts", time.Now().String(), service, attempts)
+		logMsg = fmt.Sprintf("%s Service %s has been started after %d attempts", time.Now().String(), service, attempts)
 	case serviceCannotStart:
 		logMsg = fmt.Sprintf("%s Service %s can't be started after %d attempts", time.Now().String(), service, attempts)
 	}
@@ -91,26 +100,36 @@ func notify(notifier *notifier.Notifier, service string, attempts, status int) {
 	log.Println(logMsg)
 }
 
-func (watchdog *Watchdog) updateSettings(newSettings *db.Settings) {
-	checkInterval, err := time.ParseDuration(newSettings.NumOfSecCheck)
-	if err != nil {
-		log.Println(err)
-	}
+func (watchdog *Watchdog) updateSettings(watching bool) {
+	db := db.New()
+	for watching {
+		time.Sleep(checkForSettingsTime)
+		newSettings, err := db.GetItem("1")
+		if err != nil {
+			log.Println(err)
+		}
 
-	retryInterval, err := time.ParseDuration(newSettings.NumOfSecWait)
-	if err != nil {
-		log.Println(err)
-	}
+		checkInterval, err := time.ParseDuration(newSettings.NumOfSecCheck)
+		if err != nil {
+			log.Println(err)
+		}
 
-	attemptVal, err := strconv.Atoi(newSettings.NumOfAttempts)
-	if err != nil {
-		log.Println(err)
-	}
+		retryInterval, err := time.ParseDuration(newSettings.NumOfSecWait)
+		if err != nil {
+			log.Println(err)
+		}
 
-	watchdog.name = newSettings.ListOfServices
-	watchdog.numOfSecCheck = checkInterval
-	watchdog.numOfSecWait = retryInterval
-	watchdog.numOfAttempts = attemptVal
+		attemptVal, err := strconv.Atoi(newSettings.NumOfAttempts)
+		if err != nil {
+			log.Println(err)
+		}
+
+		watchdog.name = newSettings.ListOfServices
+		watchdog.numOfSecCheck = checkInterval
+		watchdog.numOfSecWait = retryInterval
+		watchdog.numOfAttempts = attemptVal
+
+	}
 
 }
 
@@ -118,7 +137,6 @@ func (watchdog *Watchdog) Watch(notifier *notifier.Notifier, stop chan bool) err
 	watching := true
 	checkStatus := make(chan time.Time)
 	startService := make(chan time.Time)
-	checkSettings := make(chan time.Time)
 
 	log.Printf("Watch dog for sevice %s start running", watchdog.name)
 	go func() {
@@ -128,11 +146,13 @@ func (watchdog *Watchdog) Watch(notifier *notifier.Notifier, stop chan bool) err
 		startService <- time.Now()
 	}()
 
+	go watchdog.updateSettings(watching)
+
 	for watching {
 		run := watchdog.IsRunning()
 		if !run {
 			notify(notifier, watchdog.name, 0, serviceDown)
-			for i := 0; i <= watchdog.numOfAttempts && watching; i++ {
+			for i := 1; i <= watchdog.numOfAttempts && watching; i++ {
 				if run = watchdog.Start(); run {
 					notify(notifier, watchdog.name, i, serviceStart)
 					break
@@ -157,18 +177,6 @@ func (watchdog *Watchdog) Watch(notifier *notifier.Notifier, stop chan bool) err
 			checkStatus <- time.Now()
 		}()
 		<-checkStatus
-
-		go func() {
-			time.Sleep(checkForSettingsTime)
-			db := db.New()
-			sett, err := db.GetItem("1")
-			if err != nil {
-				log.Println(err)
-			}
-			watchdog.updateSettings(sett)
-			checkSettings <- time.Now()
-		}()
-		<-checkSettings
 	}
 	return nil
 

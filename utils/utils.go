@@ -25,3 +25,17 @@ func GetConfig(value string) string {
 
 	return output
 }
+
+func RemoveIndex(s []string, index int) []string {
+	return append(s[:index], s[index+1:]...)
+}
+
+func IndexOf(slice []string, item string) int {
+	for i := range slice {
+		if slice[i] == item {
+			return i
+		}
+	}
+
+	return -1 // Not found
+}
