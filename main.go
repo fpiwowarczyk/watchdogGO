@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
 
 	"github.com/fpiwowarczyk/watchdogGO/db"
@@ -19,6 +20,8 @@ var (
 )
 
 func main() {
+	var wg sync.WaitGroup
+	var services []*watchdog.Watchdog
 	flag.Parse()
 	db := db.New()
 	sett, err := db.GetItem(*serviceId)
@@ -33,9 +36,12 @@ func main() {
 		log.Println(err)
 	}
 
-	service, err := watchdog.NewWatchdog(sett.ListOfServices, sett.NumOfSecCheck, sett.NumOfSecWait, attemptVal)
-	if err != nil {
-		log.Println(err)
+	for _, serv := range sett.ListOfServices {
+		service, err := watchdog.NewWatchdog(serv, sett.NumOfSecCheck, sett.NumOfSecWait, attemptVal)
+		if err != nil {
+			log.Println(err)
+		}
+		services = append(services, service)
 	}
 
 	context := daemon.Context{
@@ -61,8 +67,15 @@ func main() {
 
 	go func() {
 		_ = <-sigc
-		stop <- true
+		for range services {
+			stop <- true
+		}
 	}()
 
-	service.Watch(notifier, stop)
+	for _, service := range services {
+		wg.Add(1)
+		go service.Watch(notifier, stop, &wg)
+	}
+	wg.Wait()
+
 }
