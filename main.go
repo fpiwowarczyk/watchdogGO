@@ -1,127 +1,66 @@
 package main
 
 import (
+	"flag"
 	"log"
-	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
-	"github.com/takama/daemon"
+	"github.com/fpiwowarczyk/watchdogGO/db"
+	"github.com/fpiwowarczyk/watchdogGO/watchdog"
+	"github.com/sevlyar/go-daemon"
 )
 
-const (
-	name        = "watchdog"
-	description = "watchdog daemon"
-
-	port = ":1337"
+var (
+	serviceId = flag.String("id", "1", "Dynamodb id of row with settings")
 )
-
-var stdlog, errlog *log.Logger
-
-type Service struct {
-	daemon.Daemon
-}
-
-// Manage by daemon commands or run the daemon
-func (service *Service) Manage() (string, error) {
-	usage := "Usage : watchdog install | remove | start | stop | status"
-
-	// if received any kind of command, do it
-	if len(os.Args) > 1 {
-		command := os.Args[1]
-		switch command {
-		case "install":
-			return service.Install()
-		case "remove":
-			return service.Remove()
-		case "start":
-			return service.Start()
-		case "stop":
-			return service.Stop()
-		case "status":
-			return service.Status()
-		default:
-			return usage, nil
-		}
-	}
-
-	// Do something, call your gorutines, etc
-
-	//Set up channel on which to send signal notifications.
-	// We must use a buffered cchannel or risk missing the signal
-	// if we're not ready to receive wen the signal is sent
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, os.Kill, syscall.SIGTERM)
-
-	// Set up listener for defined host and port
-	listener, err := net.Listen("tcp", port)
-	if err != nil {
-		return "Possibly was a problem with the port binding", err
-	}
-
-	// set up channel on which to send accepted connections
-	listen := make(chan net.Conn, 100)
-	go acceptConnection(listener, listen)
-
-	// loop work cycle with accpet connections or interrupt
-	// by sysem signal
-	for {
-		select {
-		case conn := <-listen:
-			go handleClient(conn)
-		case killSignal := <-interrupt:
-			stdlog.Println("Got signal:", killSignal)
-			stdlog.Println("Stoping listening on ", listener.Addr())
-			listener.Close()
-			if killSignal == os.Interrupt {
-				return "Daemon was interrupted by system signal", nil
-			}
-			return "Daemon was killed", nil
-		}
-	}
-
-}
-
-func acceptConnection(listener net.Listener, listen chan<- net.Conn) {
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			continue
-		}
-		listen <- conn
-	}
-}
-
-func handleClient(client net.Conn) {
-	for {
-		buf := make([]byte, 4096)
-		numbytes, err := client.Read(buf)
-		if numbytes == 0 || err != nil {
-			return
-		}
-		client.Write(buf[:numbytes])
-	}
-}
-
-func init() {
-	stdlog = log.New(os.Stdout, "", log.Ldate|log.Ltime)
-	stdlog = log.New(os.Stdout, "", log.Ldate|log.Ltime)
-}
 
 func main() {
-	// srv, err := daemon.New(name, description, daemon.SystemDaemon)
-	// if err != nil {
-	// 	errlog.Println("Error: ", err)
-	// 	os.Exit(1)
-	// }
+	flag.Parse()
+	db := db.New()
+	sett, err := db.GetItem(*serviceId)
 
-	// service := &Service{srv}
-	// status, err := service.Manage()
-	// if err != nil {
-	// 	errlog.Println(status, "\nError: ",err)
-	// 	os.Exit(1)
-	// }
-	// fmt.Println(status)
+	if err != nil {
+		log.Println(err)
+	}
 
+	attemptVal, err := strconv.Atoi(sett.NumOfAttempts)
+	if err != nil {
+		log.Println(err)
+	}
+
+	service, err := watchdog.NewWatchdog(sett.ListOfServices, sett.NumOfSecCheck, sett.NumOfSecWait, attemptVal)
+	if err != nil {
+		log.Println(err)
+	}
+
+	context := daemon.Context{
+		LogFileName: "watchdog.log",
+		LogFilePerm: 0644,
+	}
+	child, err := context.Reborn()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if child != nil {
+		return
+	}
+
+	defer context.Release()
+
+	stop := make(chan bool)
+	sigc := make(chan os.Signal, 1)
+
+	signal.Notify(sigc,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+
+	go func() {
+		_ = <-sigc
+		stop <- true
+	}()
+
+	service.Watch(stop)
 }

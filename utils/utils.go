@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/creamdog/gonfig"
@@ -10,18 +10,18 @@ import (
 func GetConfig(value string) string {
 	file, err := os.Open("./config.json")
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	defer file.Close()
 
 	config, err := gonfig.FromJson(file)
 	if err != nil {
-		// TODO: error handle
+		log.Println(err)
 	}
-	watchdogTable, err := config.GetString(value, nil)
+	output, err := config.GetString(value, nil)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 
-	return watchdogTable
+	return output
 }

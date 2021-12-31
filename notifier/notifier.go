@@ -9,12 +9,12 @@ import (
 )
 
 type Connection struct {
-	sess  *session.Session
-	svc   *sns.SNS
-	topic *string
+	sess     *session.Session
+	svc      *sns.SNS
+	topicPtr *string
 }
 
-func New() {
+func New() *Connection {
 	conn := new(Connection)
 	conn.sess = session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
@@ -22,13 +22,15 @@ func New() {
 	conn.svc = sns.New(conn.sess)
 
 	topic := utils.GetConfig("sns/watchdog")
-	conn.topic = &topic
+	conn.topicPtr = &topic
+
+	return conn
 }
 
-func (conn *Connection) Publish(message *string) {
+func (conn *Connection) Publish(messagePtr *string) {
 	_, err := conn.svc.Publish(&sns.PublishInput{
-		Message:  message,
-		TopicArn: conn.topic,
+		Message:  messagePtr,
+		TopicArn: conn.topicPtr,
 	})
 	if err != nil {
 		fmt.Println(err.Error())
