@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/fpiwowarczyk/watchdogGO/db"
+	"github.com/fpiwowarczyk/watchdogGO/notifier"
 	"github.com/fpiwowarczyk/watchdogGO/watchdog"
 	"github.com/sevlyar/go-daemon"
 )
@@ -21,10 +22,11 @@ func main() {
 	flag.Parse()
 	db := db.New()
 	sett, err := db.GetItem(*serviceId)
-
 	if err != nil {
 		log.Println(err)
 	}
+
+	notifier := notifier.New()
 
 	attemptVal, err := strconv.Atoi(sett.NumOfAttempts)
 	if err != nil {
@@ -62,5 +64,5 @@ func main() {
 		stop <- true
 	}()
 
-	service.Watch(stop)
+	service.Watch(notifier, stop)
 }

@@ -8,14 +8,14 @@ import (
 	"github.com/fpiwowarczyk/watchdogGO/utils"
 )
 
-type Connection struct {
+type Notifier struct {
 	sess     *session.Session
 	svc      *sns.SNS
 	topicPtr *string
 }
 
-func New() *Connection {
-	conn := new(Connection)
+func New() *Notifier {
+	conn := new(Notifier)
 	conn.sess = session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
@@ -27,7 +27,7 @@ func New() *Connection {
 	return conn
 }
 
-func (conn *Connection) Publish(messagePtr *string) {
+func (conn *Notifier) Publish(messagePtr *string) {
 	_, err := conn.svc.Publish(&sns.PublishInput{
 		Message:  messagePtr,
 		TopicArn: conn.topicPtr,

@@ -18,7 +18,7 @@ type Connection struct {
 
 type Settings struct {
 	id             string
-	ListOfServices []string
+	ListOfServices string
 	NumOfSecCheck  string
 	NumOfSecWait   string
 	NumOfAttempts  string
