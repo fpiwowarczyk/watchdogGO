@@ -70,7 +70,7 @@ func (conn *Connection) PutItem() {
 
 	result, err := conn.svc.PutItem(input)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 	}
 	fmt.Println(result)
 }

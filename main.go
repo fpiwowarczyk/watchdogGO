@@ -20,7 +20,7 @@ var (
 	settingsID = flag.String("id", "1", "Dynamodb id of settings")
 )
 
-func setUpWatchdog(notifier *notifier.Notifier, wg *sync.WaitGroup) {
+func setUpWatchdogForEachService(notifier *notifier.Notifier, wg *sync.WaitGroup) {
 	db := db.New()
 	working := true
 	stop := make(chan bool)
@@ -76,7 +76,10 @@ func main() {
 	var wg sync.WaitGroup
 	flag.Parse()
 
-	notifier := notifier.New()
+	notifier, err := notifier.New()
+	if err != nil {
+		log.Println(err)
+	}
 
 	context := daemon.Context{
 		LogFileName: "watchdog.log",
@@ -93,7 +96,7 @@ func main() {
 	defer context.Release()
 
 	wg.Add(1)
-	go setUpWatchdog(notifier, &wg)
+	go setUpWatchdogForEachService(notifier, &wg)
 	wg.Wait()
 
 }
