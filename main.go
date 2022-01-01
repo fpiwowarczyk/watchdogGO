@@ -20,7 +20,7 @@ var (
 	settingsID = flag.String("id", "1", "Dynamodb id of settings")
 )
 
-func updateSettings(notifier *notifier.Notifier, wg *sync.WaitGroup) {
+func setUpWatchdog(notifier *notifier.Notifier, wg *sync.WaitGroup) {
 	db := db.New()
 	working := true
 	stop := make(chan bool)
@@ -89,10 +89,11 @@ func main() {
 	if child != nil {
 		return
 	}
-	wg.Add(1)
-	go updateSettings(notifier, &wg)
-	wg.Wait()
 
 	defer context.Release()
+
+	wg.Add(1)
+	go setUpWatchdog(notifier, &wg)
+	wg.Wait()
 
 }

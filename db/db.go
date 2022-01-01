@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -25,6 +26,7 @@ type Settings struct {
 }
 
 var watchdogTable string
+var err error
 
 func New() *Connection {
 	conn := new(Connection)
@@ -33,13 +35,16 @@ func New() *Connection {
 	}))
 	conn.svc = dynamodb.New(conn.sess)
 
-	watchdogTable = utils.GetConfig("tables/watchdog")
+	watchdogTable, err = utils.GetConfig("tables/watchdog")
+	if err != nil {
+		log.Println(err)
+	}
 
 	return conn
 
 }
 
-// To remove, only added for testing
+// only added for testing
 func (conn *Connection) PutItem() {
 	input := &dynamodb.PutItemInput{
 		Item: map[string]*dynamodb.AttributeValue{
@@ -48,7 +53,6 @@ func (conn *Connection) PutItem() {
 			},
 			"ListOfServices": {
 				SS: aws.StringSlice([]string{"bluetooth", "lvm2"}),
-				// SS: aws.String("bluetooth"),
 			},
 			"NumOfSecCheck": {
 				S: aws.String("60s"),
@@ -87,32 +91,31 @@ func (conn *Connection) GetItem(id string) (*Settings, error) {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case dynamodb.ErrCodeProvisionedThroughputExceededException:
-				fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+				log.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
 			case dynamodb.ErrCodeResourceNotFoundException:
-				fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+				log.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
 			case dynamodb.ErrCodeRequestLimitExceeded:
-				fmt.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
+				log.Println(dynamodb.ErrCodeRequestLimitExceeded, aerr.Error())
 			case dynamodb.ErrCodeInternalServerError:
-				fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+				log.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return nil, err
 	}
 
 	if result.Item == nil {
-		fmt.Println("Could not find '" + id + "'")
+		log.Println("Could not find '" + id + "'")
 	}
 
 	settings := Settings{}
 
 	err = dynamodbattribute.UnmarshalMap(result.Item, &settings)
-
 	if err != nil {
-		panic(fmt.Sprintf("Failed to unmarshal Record, %v", err))
+		log.Println(fmt.Sprintf("Failed to unmarshal Record, %v", err))
 	}
 
 	return &settings, nil

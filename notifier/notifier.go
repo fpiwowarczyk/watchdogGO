@@ -1,7 +1,7 @@
 package notifier
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns"
@@ -21,18 +21,26 @@ func New() *Notifier {
 	}))
 	conn.svc = sns.New(conn.sess)
 
-	topic := utils.GetConfig("sns/watchdog")
+	topic, err := utils.GetConfig("sns/watchdog")
+	if err != nil {
+		log.Println(err)
+	}
 	conn.topicPtr = &topic
 
 	return conn
 }
 
-func (conn *Notifier) Publish(messagePtr *string) {
+func (conn *Notifier) publish(messagePtr *string) {
 	_, err := conn.svc.Publish(&sns.PublishInput{
 		Message:  messagePtr,
 		TopicArn: conn.topicPtr,
 	})
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 	}
+}
+
+func (notifier *Notifier) Notify(message string) {
+	notifier.publish(&message)
+	log.Println(message)
 }
