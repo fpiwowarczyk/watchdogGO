@@ -9,10 +9,3 @@ OR
 
 go run main.go -id <num of settings id from dynamodb>
 ```
-
-# TODO
-
-- [ ] Add tests
-- [ ] Clean code
-- [ ] Re run watchdogs only if settings differ
-- [ ] Update README

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/fpiwowarczyk/watchdogGO/notifier"
+	. "github.com/fpiwowarczyk/watchdogGO/notifier"
 )
 
 type Watchdog struct {
