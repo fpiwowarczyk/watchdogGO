@@ -12,7 +12,7 @@ import (
 	"github.com/fpiwowarczyk/watchdogGO/utils"
 )
 
-type Connection struct {
+type DynamoDB struct {
 	sess *session.Session
 	svc  *dynamodb.DynamoDB
 }
@@ -28,24 +28,24 @@ type Settings struct {
 var watchdogTable string
 var err error
 
-func New() *Connection {
-	conn := new(Connection)
-	conn.sess = session.Must(session.NewSessionWithOptions(session.Options{
+func New() *DynamoDB {
+	db := new(DynamoDB)
+	db.sess = session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
-	conn.svc = dynamodb.New(conn.sess)
+	db.svc = dynamodb.New(db.sess)
 
 	watchdogTable, err = utils.GetConfig("tables/watchdog")
 	if err != nil {
 		log.Println(err)
 	}
 
-	return conn
+	return db
 
 }
 
 // only added for testing
-func (conn *Connection) PutItem() {
+func (db *DynamoDB) PutItem() {
 	input := &dynamodb.PutItemInput{
 		Item: map[string]*dynamodb.AttributeValue{
 			"id": {
@@ -68,14 +68,14 @@ func (conn *Connection) PutItem() {
 		TableName:              aws.String(watchdogTable),
 	}
 
-	result, err := conn.svc.PutItem(input)
+	result, err := db.svc.PutItem(input)
 	if err != nil {
 		log.Println(err.Error())
 	}
 	fmt.Println(result)
 }
 
-func (conn *Connection) GetItem(id string) (*Settings, error) {
+func (db *DynamoDB) GetItem(id string) (*Settings, error) {
 	input := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"id": {
@@ -85,7 +85,7 @@ func (conn *Connection) GetItem(id string) (*Settings, error) {
 		TableName: aws.String(watchdogTable),
 	}
 
-	result, err := conn.svc.GetItem(input)
+	result, err := db.svc.GetItem(input)
 
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
@@ -120,4 +120,15 @@ func (conn *Connection) GetItem(id string) (*Settings, error) {
 
 	return &settings, nil
 
+}
+
+func (sett *Settings) Equals(newSett *Settings) bool {
+	if newSett.NumOfAttempts != sett.NumOfAttempts ||
+		newSett.NumOfSecCheck != sett.NumOfSecCheck ||
+		newSett.NumOfSecWait != sett.NumOfSecWait ||
+		utils.Equals(newSett.ListOfServices, sett.ListOfServices) {
+		return true
+	}
+
+	return false
 }

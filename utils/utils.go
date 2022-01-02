@@ -25,3 +25,12 @@ func GetConfig(value string) (string, error) {
 
 	return output, nil
 }
+
+func Equals(a, b []string) bool {
+	for i, el := range a {
+		if el != b[i] {
+			return false
+		}
+	}
+	return true
+}

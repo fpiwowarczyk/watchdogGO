@@ -11,13 +11,6 @@ import (
 	"github.com/fpiwowarczyk/watchdogGO/notifier"
 )
 
-const (
-	checkForSettingsTime = time.Minute * 15
-	serviceDown          = iota
-	serviceStart         = iota
-	serviceCannotStart   = iota
-)
-
 type Watchdog struct {
 	name          string
 	numOfSecCheck time.Duration
