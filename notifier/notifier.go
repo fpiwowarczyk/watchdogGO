@@ -1,6 +1,7 @@
 package notifier
 
 import (
+	"errors"
 	"log"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -16,6 +17,7 @@ type Notifier struct {
 
 type NotifierI interface {
 	publish(messagePtr *string) error
+	Notify(message string) error
 }
 
 func New() (*Notifier, error) {
@@ -25,7 +27,7 @@ func New() (*Notifier, error) {
 	}))
 	notifier.svc = sns.New(notifier.sess)
 
-	topic, err := utils.GetConfig("sns/watchdog")
+	topic, err := utils.GetConfig("sns/watchdog", utils.OsFS{})
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -47,7 +49,10 @@ func (notifier *Notifier) publish(messagePtr *string) error {
 	return nil
 }
 
-func Notify(notifier NotifierI, message string) error {
+func (notifier *Notifier) Notify(message string) error {
+	if len(message) < 1 {
+		return errors.New("Message need to have body")
+	}
 	err := notifier.publish(&message)
 	if err != nil {
 		return err

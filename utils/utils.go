@@ -2,13 +2,12 @@ package utils
 
 import (
 	"errors"
-	"os"
 
 	"github.com/creamdog/gonfig"
 )
 
-func GetConfig(value string) (string, error) {
-	file, err := os.Open("/home/filip/go/src/github.com/fpiwowarczyk/watchdogGO/config.json")
+func GetConfig(value string, fs FileSystem) (string, error) {
+	file, err := fs.Open("/home/filip/go/src/github.com/fpiwowarczyk/watchdogGO/config.json") // Can change to env
 	if err != nil {
 		return "", err
 	}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/fpiwowarczyk/watchdogGO/db"
 	"github.com/fpiwowarczyk/watchdogGO/notifier"
+	"github.com/fpiwowarczyk/watchdogGO/utils"
 	"github.com/fpiwowarczyk/watchdogGO/watchdog"
 	"github.com/sevlyar/go-daemon"
 )
@@ -48,7 +49,7 @@ func setUpWatchdogForEachService(notifier *notifier.Notifier, wg *sync.WaitGroup
 			}
 
 			for _, serv := range sett.ListOfServices {
-				service, err := watchdog.NewWatchdog(serv, sett.NumOfSecCheck, sett.NumOfSecWait, attemptVal)
+				service, err := watchdog.NewWatchdog(serv, sett.NumOfSecCheck, sett.NumOfSecWait, attemptVal, utils.OsFS{})
 				if err != nil {
 					log.Println(err)
 				}
@@ -104,7 +105,7 @@ func main() {
 	}
 	child, err := context.Reborn()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	if child != nil {
 		return

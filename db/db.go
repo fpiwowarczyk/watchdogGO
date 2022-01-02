@@ -12,6 +12,10 @@ import (
 	"github.com/fpiwowarczyk/watchdogGO/utils"
 )
 
+type DatabaseInterface interface {
+	GetItem(id string) (*Settings, error)
+}
+
 type DynamoDB struct {
 	sess *session.Session
 	svc  *dynamodb.DynamoDB
@@ -35,7 +39,7 @@ func New() *DynamoDB {
 	}))
 	db.svc = dynamodb.New(db.sess)
 
-	watchdogTable, err = utils.GetConfig("tables/watchdog")
+	watchdogTable, err = utils.GetConfig("tables/watchdog", utils.OsFS{})
 	if err != nil {
 		log.Println(err)
 	}
@@ -44,7 +48,7 @@ func New() *DynamoDB {
 
 }
 
-// only added for testing
+// only added to put item in table
 func (db *DynamoDB) PutItem() {
 	input := &dynamodb.PutItemInput{
 		Item: map[string]*dynamodb.AttributeValue{
