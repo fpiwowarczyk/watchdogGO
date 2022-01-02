@@ -126,9 +126,9 @@ func (sett *Settings) Equals(newSett *Settings) bool {
 	if newSett.NumOfAttempts != sett.NumOfAttempts ||
 		newSett.NumOfSecCheck != sett.NumOfSecCheck ||
 		newSett.NumOfSecWait != sett.NumOfSecWait ||
-		utils.Equals(newSett.ListOfServices, sett.ListOfServices) {
-		return true
+		!utils.Equals(newSett.ListOfServices, sett.ListOfServices) {
+		return false
 	}
 
-	return false
+	return true
 }

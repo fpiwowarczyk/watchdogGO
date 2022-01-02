@@ -14,27 +14,31 @@ type Notifier struct {
 	topicPtr *string
 }
 
+type NotifierI interface {
+	publish(messagePtr *string) error
+}
+
 func New() (*Notifier, error) {
-	conn := new(Notifier)
-	conn.sess = session.Must(session.NewSessionWithOptions(session.Options{
+	notifier := new(Notifier)
+	notifier.sess = session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
-	conn.svc = sns.New(conn.sess)
+	notifier.svc = sns.New(notifier.sess)
 
 	topic, err := utils.GetConfig("sns/watchdog")
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-	conn.topicPtr = &topic
+	notifier.topicPtr = &topic
 
-	return conn, nil
+	return notifier, nil
 }
 
-func (conn *Notifier) publish(messagePtr *string) error {
-	_, err := conn.svc.Publish(&sns.PublishInput{
+func (notifier *Notifier) publish(messagePtr *string) error {
+	_, err := notifier.svc.Publish(&sns.PublishInput{
 		Message:  messagePtr,
-		TopicArn: conn.topicPtr,
+		TopicArn: notifier.topicPtr,
 	})
 	if err != nil {
 		log.Println(err.Error())
@@ -43,7 +47,7 @@ func (conn *Notifier) publish(messagePtr *string) error {
 	return nil
 }
 
-func (notifier *Notifier) Notify(message string) error {
+func Notify(notifier NotifierI, message string) error {
 	err := notifier.publish(&message)
 	if err != nil {
 		return err

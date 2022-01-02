@@ -1,26 +1,28 @@
 package utils
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-type MockConfig struct {
-	mock.Mock
+func TestEqualsStringsSlice_Success(t *testing.T) {
+
+	output := Equals([]string{"a", "b"}, []string{"a", "b"})
+
+	assert.True(t, output, "Slices with the same elements are equal")
 }
 
-func TestGetConfig_Success(t *testing.T) {
-	output, err := GetConfig("test/testConfig")
+func TestEqualsStringsSlice_Fail_DiffElems(t *testing.T) {
 
-	assert.Nil(t, err)
-	assert.Equal(t, "Some value", output)
+	output := Equals([]string{"a", "b"}, []string{"a", "c"})
+
+	assert.False(t, output, "Slices with different elements aren't equal")
 }
 
-func TestGetConfig_Fail_MissingProperty(t *testing.T) {
-	_, err := GetConfig("missingProp")
+func TestEqualsStringsSlice_Fail_DiffLen(t *testing.T) {
 
-	assert.Equal(t, errors.New("Missing property: missingProp"), err)
+	output := Equals([]string{"a", "b"}, []string{"a"})
+
+	assert.False(t, output, "Slices with different len arent equal")
 }
