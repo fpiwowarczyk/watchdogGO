@@ -3,10 +3,10 @@ package notifier
 import (
 	"errors"
 	"log"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns"
-	"github.com/fpiwowarczyk/watchdogGO/utils"
 )
 
 type Notifier struct {
@@ -27,11 +27,7 @@ func New() (*Notifier, error) {
 	}))
 	notifier.svc = sns.New(notifier.sess)
 
-	topic, err := utils.GetConfig("sns/watchdog", utils.OsFS{})
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
+	topic := os.Getenv("SNSWATCHDOG")
 	notifier.topicPtr = &topic
 
 	return notifier, nil

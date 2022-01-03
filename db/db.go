@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -39,10 +40,7 @@ func New() *DynamoDB {
 	}))
 	db.svc = dynamodb.New(db.sess)
 
-	watchdogTable, err = utils.GetConfig("tables/watchdog", utils.OsFS{})
-	if err != nil {
-		log.Println(err)
-	}
+	watchdogTable = os.Getenv("TABLEWATCHDOG")
 
 	return db
 
@@ -56,7 +54,7 @@ func (db *DynamoDB) PutItem() {
 				S: aws.String("1"),
 			},
 			"ListOfServices": {
-				SS: aws.StringSlice([]string{"bluetooth", "lvm2"}),
+				SS: aws.StringSlice([]string{"bluetooth", "docker"}),
 			},
 			"NumOfSecCheck": {
 				S: aws.String("60s"),

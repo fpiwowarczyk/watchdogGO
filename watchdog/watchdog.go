@@ -71,7 +71,7 @@ func (watchdog *Watchdog) Watch(notifier *notifier.Notifier, stop chan bool) err
 	checkStatus := make(chan time.Time)
 	startService := make(chan time.Time)
 
-	log.Printf("Watch dog for sevice %s start running", watchdog.name)
+	log.Printf("Watchdoggo for sevice %s start running", watchdog.name)
 	go func() {
 		<-stop
 		watching = false
