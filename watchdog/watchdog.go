@@ -82,10 +82,10 @@ func (watchdog *Watchdog) Watch(notifier *notifier.Notifier, stop chan bool) err
 	for watching {
 		run := watchdog.IsRunning()
 		if !run {
-			notifier.Notify(fmt.Sprintf("%s Service %s is down", time.Now().String(), watchdog.name))
+			notifier.Notify(fmt.Sprintf("Service %s is down", watchdog.name))
 			for i := 1; i <= watchdog.numOfAttempts && watching; i++ {
 				if run = watchdog.Start(); run {
-					notifier.Notify(fmt.Sprintf("%s Service %s has been started after %d attempts", time.Now().String(), watchdog.name, i))
+					notifier.Notify(fmt.Sprintf("Service %s has been started after %d attempts", watchdog.name, i))
 					break
 				}
 				go func() {
@@ -96,7 +96,7 @@ func (watchdog *Watchdog) Watch(notifier *notifier.Notifier, stop chan bool) err
 			}
 		}
 		if !run {
-			notifier.Notify(fmt.Sprintf("%s Service %s can't be started after %d attempts", time.Now().String(), watchdog.name, watchdog.numOfAttempts))
+			notifier.Notify(fmt.Sprintf("Service %s can't be started after %d attempts", watchdog.name, watchdog.numOfAttempts))
 			return errors.New("Failed to start service")
 		}
 		if !watching {
