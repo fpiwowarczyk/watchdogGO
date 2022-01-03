@@ -1,5 +1,5 @@
 # watchdogGO
-Watchdog written in golang, using dynamodb and sns AWS services.
+Watchdog for linux services written in golang. Using AWS DynamoDB to get settings and SNS to send alerts 
 
 # Setup 
 
